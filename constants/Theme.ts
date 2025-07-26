@@ -20,9 +20,9 @@ export const Theme = {
     warning: '#FFB300',
     error: '#FF5252',
     
-    // Gradients
-    cosmicGradient: ['#0A0A0F', '#1A1A2E', '#2A2A3E'],
-    accentGradient: ['#00D9FF', '#6C5CE7'],
+    // Gradients - FIX: Add 'as const' to make arrays readonly
+    cosmicGradient: ['#0A0A0F', '#1A1A2E', '#2A2A3E'] as const,
+    accentGradient: ['#00D9FF', '#6C5CE7'] as const,
   },
   
   spacing: {

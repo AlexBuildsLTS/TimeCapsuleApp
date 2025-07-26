@@ -1,57 +1,107 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Pressable } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
 import { Plus, Sparkles } from 'lucide-react-native';
-import { useFonts, Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
 import { useStore } from '@/store/useStore';
 import { CapsuleCard } from '@/components/CapsuleCard';
 import { UnlockNotification } from '@/components/UnlockNotification';
 import { UnlockCeremony } from '@/components/UnlockCeremony';
 import { Theme } from '@/constants/Theme';
 import { useRouter } from 'expo-router';
+import { auth } from '@/config/firebaseConfig';
 
 export default function VaultScreen() {
-  const { capsules, currentUser } = useStore();
+  const { capsules, unlockCapsule } = useStore();
   const router = useRouter();
+  const currentUser = auth.currentUser;
+
   const [currentTime, setCurrentTime] = useState(Date.now());
-  const [showUnlockNotification, setShowUnlockNotification] = useState<string | null>(null);
-  const [showUnlockCeremony, setShowUnlockCeremony] = useState<string | null>(null);
+  const [showUnlockNotification, setShowUnlockNotification] = useState<
+    string | null
+  >(null);
+  const [showUnlockCeremony, setShowUnlockCeremony] = useState<string | null>(
+    null
+  );
+  const [dismissedNotifications, setDismissedNotifications] = useState<
+    string[]
+  >([]);
 
-  let [fontsLoaded] = useFonts({
-    'Inter-Regular': Inter_400Regular,
-    'Inter-SemiBold': Inter_600SemiBold,
-    'Inter-Bold': Inter_700Bold,
-  });
-
-  // Update time every minute for countdown timers
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(Date.now());
-    }, 60000);
-    
+    }, 1000);
     return () => clearInterval(interval);
   }, []);
 
-  // Check for unlockable capsules
+  const { userCapsules, sealedCount, readyCount, openedCount, sortedCapsules } =
+    useMemo(() => {
+      const currentUserUid = currentUser?.uid;
+      if (!currentUserUid) {
+        return {
+          userCapsules: [],
+          sealedCount: 0,
+          readyCount: 0,
+          openedCount: 0,
+          sortedCapsules: [],
+        };
+      }
+
+      const filteredCapsules = capsules.filter(
+        (c) => c.userId === currentUserUid
+      );
+
+      const now = Date.now();
+      const sealed = filteredCapsules.filter(
+        (c) => c.unlockDate > now && c.isSealed
+      );
+      const ready = filteredCapsules.filter(
+        (c) => c.unlockDate <= now && !c.isUnlocked
+      );
+      const opened = filteredCapsules.filter((c) => c.isUnlocked);
+
+      const sorted = [...filteredCapsules].sort((a, b) => {
+        const aIsReady = a.unlockDate <= now && !a.isUnlocked;
+        const bIsReady = b.unlockDate <= now && !b.isUnlocked;
+        if (aIsReady && !bIsReady) return -1;
+        if (!aIsReady && bIsReady) return 1;
+        if (a.isUnlocked && !b.isUnlocked) return 1;
+        if (!a.isUnlocked && b.isUnlocked) return -1;
+        return b.createdAt - a.createdAt;
+      });
+
+      return {
+        userCapsules: filteredCapsules,
+        sealedCount: sealed.length,
+        readyCount: ready.length,
+        openedCount: opened.length,
+        sortedCapsules: sorted,
+      };
+    }, [capsules, currentTime, currentUser]);
+
   useEffect(() => {
-    const unlockableCapsule = capsules.find(c => 
-      c.unlockDate <= currentTime && 
-      !c.isUnlocked && 
-      c.isSealed
+    const unlockableCapsule = userCapsules.find(
+      (c) =>
+        c.unlockDate <= Date.now() &&
+        !c.isUnlocked &&
+        c.isSealed &&
+        !dismissedNotifications.includes(c.id)
     );
-    
+
     if (unlockableCapsule && !showUnlockNotification && !showUnlockCeremony) {
       setShowUnlockNotification(unlockableCapsule.id);
     }
-  }, [currentTime, capsules, showUnlockNotification, showUnlockCeremony]);
-  if (!fontsLoaded) {
-    return null;
-  }
+  }, [
+    currentTime,
+    userCapsules,
+    showUnlockNotification,
+    showUnlockCeremony,
+    dismissedNotifications,
+  ]);
 
   const handleCreateCapsule = () => {
-    router.push('/create');
+    router.push('/(tabs)/create');
   };
 
   const handleUnlockCapsule = (capsuleId: string) => {
@@ -59,24 +109,30 @@ export default function VaultScreen() {
     setShowUnlockCeremony(capsuleId);
   };
 
+  const handleDismissNotification = (capsuleId: string) => {
+    setShowUnlockNotification(null);
+    setDismissedNotifications((prev) => [...prev, capsuleId]);
+    router.push('/(tabs)/profile');
+  };
+
   const handleUnlockComplete = (capsuleId: string) => {
-    const { unlockCapsule } = useStore.getState();
     unlockCapsule(capsuleId);
     setShowUnlockCeremony(null);
   };
-  const unlockableCapsules = capsules.filter(c => c.unlockDate <= currentTime && !c.isUnlocked);
-  const sealedCapsules = capsules.filter(c => c.unlockDate > currentTime && c.isSealed);
-  const unlockedCapsules = capsules.filter(c => c.isUnlocked);
 
-  const notificationCapsule = showUnlockNotification ? 
-    capsules.find(c => c.id === showUnlockNotification) : null;
-  
-  const ceremonyCapsule = showUnlockCeremony ? 
-    capsules.find(c => c.id === showUnlockCeremony) : null;
+  const notificationCapsule = showUnlockNotification
+    ? userCapsules.find((c) => c.id === showUnlockNotification)
+    : null;
+  const ceremonyCapsule = showUnlockCeremony
+    ? userCapsules.find((c) => c.id === showUnlockCeremony)
+    : null;
+
   return (
-    <LinearGradient colors={Theme.colors.cosmicGradient} style={styles.container}>
+    <LinearGradient
+      colors={Theme.colors.cosmicGradient}
+      style={styles.container}
+    >
       <SafeAreaView style={styles.safeArea}>
-        {/* Header */}
         <MotiView
           from={{ opacity: 0, translateY: -20 }}
           animate={{ opacity: 1, translateY: 0 }}
@@ -86,13 +142,13 @@ export default function VaultScreen() {
           <View style={styles.headerContent}>
             <View>
               <Text style={styles.greeting}>Welcome back,</Text>
-              <Text style={styles.userName}>{currentUser?.name}</Text>
+              <Text style={styles.userName}>
+                {currentUser?.displayName || 'Future Traveler'}
+              </Text>
             </View>
             <Sparkles size={32} color={Theme.colors.primary} />
           </View>
         </MotiView>
-
-        {/* Stats Row */}
         <MotiView
           from={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -100,22 +156,24 @@ export default function VaultScreen() {
           style={styles.statsContainer}
         >
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{sealedCapsules.length}</Text>
+            <Text style={styles.statNumber}>{sealedCount}</Text>
             <Text style={styles.statLabel}>Sealed</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={[styles.statNumber, { color: Theme.colors.primary }]}>{unlockableCapsules.length}</Text>
+            <Text style={[styles.statNumber, { color: Theme.colors.primary }]}>
+              {readyCount}
+            </Text>
             <Text style={styles.statLabel}>Ready</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={[styles.statNumber, { color: Theme.colors.success }]}>{unlockedCapsules.length}</Text>
+            <Text style={[styles.statNumber, { color: Theme.colors.success }]}>
+              {openedCount}
+            </Text>
             <Text style={styles.statLabel}>Opened</Text>
           </View>
         </MotiView>
-
-        {/* Capsules List */}
         <View style={styles.listContainer}>
-          {capsules.length === 0 ? (
+          {sortedCapsules.length === 0 ? (
             <MotiView
               from={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -125,26 +183,20 @@ export default function VaultScreen() {
               <Sparkles size={64} color={Theme.colors.primary} />
               <Text style={styles.emptyTitle}>Your vault awaits</Text>
               <Text style={styles.emptySubtitle}>
-                Create your first time capsule and send a message to your future self
+                Create your first time capsule and send a message to your future
+                self
               </Text>
             </MotiView>
           ) : (
             <FlashList
-              data={capsules}
+              data={sortedCapsules}
               renderItem={({ item }) => (
                 <CapsuleCard
                   capsule={item}
                   onPress={() => {
-                    const canUnlock = item.unlockDate <= currentTime && !item.isUnlocked;
-                    if (canUnlock) {
-                      handleUnlockCapsule(item.id);
-                    } else if (item.isUnlocked) {
-                      // TODO: Navigate to capsule detail view
-                      console.log('View unlocked capsule:', item.title);
-                    } else {
-                      // Sealed capsule - show countdown
-                      console.log('Capsule still sealed:', item.title);
-                    }
+                    const canUnlock =
+                      item.unlockDate <= Date.now() && !item.isUnlocked;
+                    if (canUnlock) handleUnlockCapsule(item.id);
                   }}
                 />
               )}
@@ -155,8 +207,6 @@ export default function VaultScreen() {
             />
           )}
         </View>
-
-        {/* Floating Action Button */}
         <MotiView
           from={{ scale: 0, rotate: '180deg' }}
           animate={{ scale: 1, rotate: '0deg' }}
@@ -164,23 +214,26 @@ export default function VaultScreen() {
           style={styles.fabContainer}
         >
           <Pressable onPress={handleCreateCapsule} style={styles.fab}>
-            <LinearGradient colors={Theme.colors.accentGradient} style={styles.fabGradient}>
-              <Plus size={28} color={Theme.colors.background} strokeWidth={2.5} />
+            <LinearGradient
+              colors={Theme.colors.accentGradient}
+              style={styles.fabGradient}
+            >
+              <Plus
+                size={28}
+                color={Theme.colors.background}
+                strokeWidth={2.5}
+              />
             </LinearGradient>
           </Pressable>
         </MotiView>
       </SafeAreaView>
-
-      {/* Unlock Notification */}
       {notificationCapsule && (
         <UnlockNotification
           capsule={notificationCapsule}
           onUnlock={() => handleUnlockCapsule(notificationCapsule.id)}
-          onDismiss={() => setShowUnlockNotification(null)}
+          onDismiss={() => handleDismissNotification(notificationCapsule.id)}
         />
       )}
-
-      {/* Unlock Ceremony */}
       {ceremonyCapsule && (
         <UnlockCeremony
           capsule={ceremonyCapsule}
@@ -192,16 +245,9 @@ export default function VaultScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  header: {
-    padding: Theme.spacing.lg,
-    paddingBottom: Theme.spacing.md,
-  },
+  container: { flex: 1 },
+  safeArea: { flex: 1 },
+  header: { padding: Theme.spacing.lg, paddingBottom: Theme.spacing.md },
   headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -243,12 +289,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     marginTop: 2,
   },
-  listContainer: {
-    flex: 1,
-  },
-  listContent: {
-    paddingVertical: Theme.spacing.sm,
-  },
+  listContainer: { flex: 1 },
+  listContent: { paddingBottom: 100, paddingTop: Theme.spacing.sm },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
@@ -273,12 +315,9 @@ const styles = StyleSheet.create({
   fabContainer: {
     position: 'absolute',
     right: Theme.spacing.lg,
-    bottom: Theme.spacing.xl + 80, // Account for tab bar
+    bottom: Theme.spacing.lg,
   },
-  fab: {
-    borderRadius: Theme.borderRadius.full,
-    ...Theme.shadows.md,
-  },
+  fab: { borderRadius: Theme.borderRadius.full, ...Theme.shadows.md },
   fabGradient: {
     width: 64,
     height: 64,

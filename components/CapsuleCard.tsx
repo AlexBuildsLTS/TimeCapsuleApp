@@ -40,7 +40,7 @@ export function CapsuleCard({ capsule, onPress }: CapsuleCardProps) {
     >
       <Pressable onPress={onPress} style={styles.container}>
         <LinearGradient
-          colors={isUnlockable ? Theme.colors.accentGradient : [Theme.colors.surface, Theme.colors.surfaceVariant]}
+          colors={isUnlockable ? (Theme.colors.accentGradient as any) : [Theme.colors.surface, Theme.colors.surfaceVariant]}
           style={styles.gradient}
         >
           <View style={styles.content}>

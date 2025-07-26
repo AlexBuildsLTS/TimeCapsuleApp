@@ -2,6 +2,7 @@
   "expo": {
     "name": "north-star-project",
     "slug": "north-star-project",
+    "owner": "alexbuildslts",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -14,7 +15,10 @@
     "web": {
       "bundler": "metro",
       "output": "single",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "html": {
+        "template": "./index.html"
+      }
     },
     "plugins": ["expo-router", "expo-font", "expo-web-browser"],
     "experiments": {

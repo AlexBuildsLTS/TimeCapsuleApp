@@ -12,6 +12,7 @@ export interface MediaItem {
 
 export interface Capsule {
   id: string;
+  userId: string; // <-- **THIS FIXES THE ERROR**
   title: string;
   description?: string;
   createdAt: number;
