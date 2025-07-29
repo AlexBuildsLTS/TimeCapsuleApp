@@ -24,12 +24,6 @@
     "experiments": {
       "typedRoutes": true
     },
-    "permissions": [
-      "android.permission.CAMERA",
-      "android.permission.RECORD_AUDIO",
-      "android.permission.ACCESS_FINE_LOCATION",
-      "android.permission.ACCESS_COARSE_LOCATION"
-    ],
     "extra": {
       "router": {},
       "eas": {

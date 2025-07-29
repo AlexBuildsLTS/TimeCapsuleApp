@@ -111,13 +111,21 @@ export class FirestoreService {
         const capsule = {
           id: docSnapshot.id,
           ...data,
-          createdAt: (data.createdAt as Timestamp).toMillis(),
-          unlockDate: (data.unlockDate as Timestamp).toMillis(),
+          createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : data.createdAt,
+          unlockDate: data.unlockDate?.toMillis ? data.unlockDate.toMillis() : data.unlockDate,
         } as Capsule;
 
         // Decrypt data if it's ready to unlock
-        if (capsule.unlockDate <= Date.now() && capsule.encryptionKey) {
+        // Check if the capsule is sealed and its unlock date has passed
+        if (
+          capsule.isSealed &&
+          capsule.unlockDate <= Date.now() &&
+          capsule.encryptionKey
+        ) {
           try {
+            // Mark the capsule as unlocked if it's sealed and the unlock date has passed
+            // This update will be reflected in the UI on the next snapshot
+            if (!capsule.isUnlocked) FirestoreService.unlockCapsule(capsule.id);
             capsule.title = EncryptionService.decryptData(
               capsule.title,
               capsule.encryptionKey

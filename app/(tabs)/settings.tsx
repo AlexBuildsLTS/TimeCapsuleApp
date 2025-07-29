@@ -5,7 +5,6 @@ import { MotiView } from 'moti';
 import { Bell, MapPin, Trash2, ChevronRight, LogOut } from 'lucide-react-native';
 import { Theme } from '@/constants/Theme';
 import { useRouter } from 'expo-router';
-import { useStore } from '@/store/useStore';
 import { auth } from '@/config/firebaseConfig';
 import { signOut } from 'firebase/auth';
 
