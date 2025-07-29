@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Pressable } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
 import { LinearGradient } from 'expo-linear-gradient';
+import { FlashList } from '@shopify/flash-list';
 import { MotiView } from 'moti';
 import { Plus, Sparkles } from 'lucide-react-native';
 import { useStore } from '@/store/useStore';
@@ -10,12 +10,52 @@ import { UnlockNotification } from '@/components/UnlockNotification';
 import { UnlockCeremony } from '@/components/UnlockCeremony';
 import { Theme } from '@/constants/Theme';
 import { useRouter } from 'expo-router';
+import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '@/config/firebaseConfig';
 
 export default function VaultScreen() {
-  const { capsules, unlockCapsule } = useStore();
+  // --- CORE LOGIC: We get the sync functions and user from the store ---
+  const {
+    capsules,
+    unlockCapsule,
+    initializeFirestoreSync,
+    stopFirestoreSync,
+    setCurrentUser,
+  } = useStore();
   const router = useRouter();
-  const currentUser = auth.currentUser;
+  const [currentUser, setCurrentUserLocal] = useState<User | null>(
+    auth.currentUser
+  );
+
+  // --- CORE LOGIC: Set up auth listener and Firestore sync ---
+  useEffect(() => {
+    const authUnsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUserLocal(user);
+      // This now correctly updates the global store with the user object
+      const storeUser = user
+        ? {
+            id: user.uid,
+            name: user.displayName || 'Future Traveler',
+            email: user.email || '',
+          }
+        : null;
+      setCurrentUser(storeUser);
+
+      if (user) {
+        // If user logs in, start syncing their data
+        initializeFirestoreSync();
+      } else {
+        // If user logs out, stop syncing
+        stopFirestoreSync();
+      }
+    });
+
+    // Cleanup listeners on component unmount
+    return () => {
+      authUnsubscribe();
+      stopFirestoreSync();
+    };
+  }, [initializeFirestoreSync, stopFirestoreSync, setCurrentUser]);
 
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [showUnlockNotification, setShowUnlockNotification] = useState<
@@ -29,39 +69,20 @@ export default function VaultScreen() {
   >([]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(Date.now());
-    }, 1000);
+    const interval = setInterval(() => setCurrentTime(Date.now()), 1000);
     return () => clearInterval(interval);
   }, []);
 
-  const { userCapsules, sealedCount, readyCount, openedCount, sortedCapsules } =
+  const { sealedCount, readyCount, openedCount, sortedCapsules } =
     useMemo(() => {
-      const currentUserUid = currentUser?.uid;
-      if (!currentUserUid) {
-        return {
-          userCapsules: [],
-          sealedCount: 0,
-          readyCount: 0,
-          openedCount: 0,
-          sortedCapsules: [],
-        };
-      }
-
-      const filteredCapsules = capsules.filter(
-        (c) => c.userId === currentUserUid
-      );
-
       const now = Date.now();
-      const sealed = filteredCapsules.filter(
-        (c) => c.unlockDate > now && c.isSealed
-      );
-      const ready = filteredCapsules.filter(
+      const sealed = capsules.filter((c) => c.unlockDate > now && c.isSealed);
+      const ready = capsules.filter(
         (c) => c.unlockDate <= now && !c.isUnlocked
       );
-      const opened = filteredCapsules.filter((c) => c.isUnlocked);
+      const opened = capsules.filter((c) => c.isUnlocked);
 
-      const sorted = [...filteredCapsules].sort((a, b) => {
+      const sorted = [...capsules].sort((a, b) => {
         const aIsReady = a.unlockDate <= now && !a.isUnlocked;
         const bIsReady = b.unlockDate <= now && !b.isUnlocked;
         if (aIsReady && !bIsReady) return -1;
@@ -72,59 +93,51 @@ export default function VaultScreen() {
       });
 
       return {
-        userCapsules: filteredCapsules,
         sealedCount: sealed.length,
         readyCount: ready.length,
         openedCount: opened.length,
         sortedCapsules: sorted,
       };
-    }, [capsules, currentTime, currentUser]);
+    }, [capsules]);
 
   useEffect(() => {
-    const unlockableCapsule = userCapsules.find(
+    const unlockableCapsule = capsules.find(
       (c) =>
         c.unlockDate <= Date.now() &&
         !c.isUnlocked &&
         c.isSealed &&
         !dismissedNotifications.includes(c.id)
     );
-
     if (unlockableCapsule && !showUnlockNotification && !showUnlockCeremony) {
       setShowUnlockNotification(unlockableCapsule.id);
     }
   }, [
     currentTime,
-    userCapsules,
+    capsules,
     showUnlockNotification,
     showUnlockCeremony,
     dismissedNotifications,
   ]);
 
-  const handleCreateCapsule = () => {
-    router.push('/(tabs)/create');
-  };
-
+  const handleCreateCapsule = () => router.push('/(tabs)/create');
   const handleUnlockCapsule = (capsuleId: string) => {
     setShowUnlockNotification(null);
     setShowUnlockCeremony(capsuleId);
   };
-
   const handleDismissNotification = (capsuleId: string) => {
     setShowUnlockNotification(null);
     setDismissedNotifications((prev) => [...prev, capsuleId]);
-    router.push('/(tabs)/profile');
   };
-
   const handleUnlockComplete = (capsuleId: string) => {
     unlockCapsule(capsuleId);
     setShowUnlockCeremony(null);
   };
 
   const notificationCapsule = showUnlockNotification
-    ? userCapsules.find((c) => c.id === showUnlockNotification)
+    ? capsules.find((c) => c.id === showUnlockNotification)
     : null;
   const ceremonyCapsule = showUnlockCeremony
-    ? userCapsules.find((c) => c.id === showUnlockCeremony)
+    ? capsules.find((c) => c.id === showUnlockCeremony)
     : null;
 
   return (
@@ -194,9 +207,8 @@ export default function VaultScreen() {
                 <CapsuleCard
                   capsule={item}
                   onPress={() => {
-                    const canUnlock =
-                      item.unlockDate <= Date.now() && !item.isUnlocked;
-                    if (canUnlock) handleUnlockCapsule(item.id);
+                    if (item.unlockDate <= Date.now() && !item.isUnlocked)
+                      handleUnlockCapsule(item.id);
                   }}
                 />
               )}

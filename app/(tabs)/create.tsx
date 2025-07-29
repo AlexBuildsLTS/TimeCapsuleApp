@@ -8,6 +8,7 @@ import {
   TextInput,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView, MotiText } from 'moti';
@@ -26,6 +27,7 @@ import { Theme } from '@/constants/Theme';
 import { MediaItem } from '@/types';
 import { MediaCapture } from '@/components/MediaCapture';
 import { DatePicker } from '@/components/DatePicker';
+import { auth } from '@/config/firebaseConfig';
 
 type CreationStep = 'details' | 'media' | 'review' | 'sealing';
 
@@ -40,12 +42,14 @@ export default function CreateScreen() {
     new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
   );
   const [media, setMedia] = useState<MediaItem[]>([]);
-  const [isSealing, setIsSealing] = useState(false);
   const [sealingSuccess, setSealingSuccess] = useState(false);
+  const [buttonLoading, setButtonLoading] = useState(false);
 
   const stepProgress = { details: 0.25, media: 0.5, review: 0.75, sealing: 1 };
 
   const handleNextStep = () => {
+    if (buttonLoading) return;
+
     switch (currentStep) {
       case 'details':
         if (!title.trim()) {
@@ -75,17 +79,28 @@ export default function CreateScreen() {
   };
 
   const handleSealCapsule = async () => {
-    setCurrentStep('sealing');
-    setIsSealing(true);
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      Alert.alert(
+        'Authentication Error',
+        'You must be signed in to create a capsule.'
+      );
+      return;
+    }
+
+    setButtonLoading(true);
 
     try {
+      setCurrentStep('sealing');
+
+      // Create capsule with encryption handled by the service
       await addCapsule({
         title,
         description,
         unlockDate: unlockDate.getTime(),
         isSealed: true,
         isUnlocked: false,
-        media,
+        media: media,
         location: {
           latitude: 40.7128,
           longitude: -74.006,
@@ -94,18 +109,17 @@ export default function CreateScreen() {
       });
 
       setSealingSuccess(true);
-      // --- FIX: Reduced the delay from 2000ms to 1500ms to make it feel faster ---
       setTimeout(() => {
         router.push('/(tabs)');
       }, 1500);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Full sealing error:', error);
       Alert.alert(
         'Failed to Seal',
-        'There was an error saving your capsule. Please try again.'
+        `An error occurred while sealing your capsule. Please check your connection and try again. \n\nError: ${error.message}`
       );
+      setButtonLoading(false);
       setCurrentStep('review');
-    } finally {
-      setIsSealing(false);
     }
   };
 
@@ -159,7 +173,7 @@ export default function CreateScreen() {
               transition={{
                 type: 'timing',
                 duration: 2000,
-                loop: isSealing,
+                loop: !sealingSuccess,
                 repeatReverse: false,
               }}
             >
@@ -179,8 +193,8 @@ export default function CreateScreen() {
               transition={{ delay: 1000 }}
               style={styles.sealingSubtitle}
             >
-              {isSealing
-                ? 'Encrypting memories for the future...'
+              {!sealingSuccess
+                ? 'Uploading memories to the cloud...'
                 : 'Returning to your vault.'}
             </MotiText>
           </View>
@@ -360,24 +374,31 @@ export default function CreateScreen() {
           <Pressable
             onPress={handleNextStep}
             style={[styles.navButton, styles.primaryButton]}
+            disabled={buttonLoading}
           >
             <LinearGradient
               colors={Theme.colors.accentGradient}
               style={styles.navButtonGradient}
             >
-              <Text
-                style={[
-                  styles.navButtonText,
-                  { color: Theme.colors.background },
-                ]}
-              >
-                {currentStep === 'review' ? 'Seal Capsule' : 'Continue'}
-              </Text>
-              {currentStep !== 'review' && (
-                <ArrowRight size={20} color={Theme.colors.background} />
-              )}
-              {currentStep === 'review' && (
-                <Seal size={20} color={Theme.colors.background} />
+              {buttonLoading ? (
+                <ActivityIndicator color={Theme.colors.background} />
+              ) : (
+                <>
+                  <Text
+                    style={[
+                      styles.navButtonText,
+                      { color: Theme.colors.background },
+                    ]}
+                  >
+                    {currentStep === 'review' ? 'Seal Capsule' : 'Continue'}
+                  </Text>
+                  {currentStep !== 'review' && (
+                    <ArrowRight size={20} color={Theme.colors.background} />
+                  )}
+                  {currentStep === 'review' && (
+                    <Seal size={20} color={Theme.colors.background} />
+                  )}
+                </>
               )}
             </LinearGradient>
           </Pressable>

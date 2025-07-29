@@ -6,18 +6,16 @@ import {
   SafeAreaView,
   Pressable,
   ScrollView,
-  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
-import { User, Settings, LogOut, Trash2 } from 'lucide-react-native';
+import { User, Settings } from 'lucide-react-native';
 import { useStore } from '@/store/useStore';
 import { Theme } from '@/constants/Theme';
 import { AuthForm } from '@/components/AuthForm';
 import { auth } from '../../config/firebaseConfig';
 import {
   onAuthStateChanged,
-  signOut,
   User as FirebaseUser,
 } from 'firebase/auth';
 import { useRouter } from 'expo-router'; // <-- Import useRouter
@@ -33,14 +31,6 @@ export default function ProfileScreen() {
     });
     return unsubscribe;
   }, []);
-
-  const handleSignOut = async () => {
-    try {
-      await signOut(auth);
-    } catch (error) {
-      Alert.alert('Error', 'Could not sign out.');
-    }
-  };
 
   if (!firebaseUser) {
     return (

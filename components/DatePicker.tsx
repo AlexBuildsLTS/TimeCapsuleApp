@@ -37,10 +37,9 @@ export function DatePicker({
     });
   };
 
-  // <-- FIX: The 'date' parameter is already a Date object. No need for .toDate()
-  const handleDateChange = (date: Date) => {
-    if (date) {
-      onDateChange(new Date(date)); // Use new Date() to ensure it's a fresh instance
+  const handleDateChange = (date: any) => {
+    if (date && date.toDate) {
+      onDateChange(date.toDate()); // CalendarPicker returns a Moment object, convert to Date
       setIsModalVisible(false);
     }
   };

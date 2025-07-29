@@ -4,6 +4,12 @@ import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import * as SplashScreen from 'expo-splash-screen';
 import { useStore } from '@/store/useStore';
+import {
+  useFonts,
+  Inter_400Regular,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from '@expo-google-fonts/inter';
 
 // --- BEST PRACTICE: Prevent the splash screen from auto-hiding before asset loading is complete. ---
 SplashScreen.preventAutoHideAsync();
@@ -11,8 +17,16 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   useFrameworkReady();
 
+  // Load fonts
+  const [fontsLoaded] = useFonts({
+    'Inter-Regular': Inter_400Regular,
+    'Inter-SemiBold': Inter_600SemiBold,
+    'Inter-Bold': Inter_700Bold,
+  });
+
   // --- FIX: State to track if the Zustand store has been hydrated ---
   const [isHydrated, setIsHydrated] = useState(false);
+  const { initializeNotifications } = useStore();
 
   // Effect to handle store hydration
   useEffect(() => {
@@ -34,13 +48,16 @@ export default function RootLayout() {
 
   // When hydration is complete, hide the splash screen
   useEffect(() => {
-    if (isHydrated) {
+    if (isHydrated && fontsLoaded) {
       SplashScreen.hideAsync();
+
+      // Initialize notifications after app is ready
+      initializeNotifications().catch(console.error);
     }
-  }, [isHydrated]);
+  }, [isHydrated, fontsLoaded, initializeNotifications]);
 
   // --- FIX: Do not render anything until the store is hydrated ---
-  if (!isHydrated) {
+  if (!isHydrated || !fontsLoaded) {
     return null;
   }
 

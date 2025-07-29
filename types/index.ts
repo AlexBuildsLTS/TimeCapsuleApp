@@ -3,6 +3,7 @@ export interface MediaItem {
   type: 'photo' | 'video' | 'audio' | 'text';
   content: string;
   timestamp: number;
+  encrypted?: boolean;
   location?: {
     latitude: number;
     longitude: number;
@@ -26,6 +27,7 @@ export interface Capsule {
     address?: string;
   };
   encryptionKey?: string;
+  notificationId?: string;
 }
 
 export interface AppState {

@@ -1,5 +1,5 @@
 {
-  "name": "north-star-starter",
+  "name": "bolt-expo-starter",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "private": true,
@@ -16,12 +16,14 @@
     "@react-navigation/bottom-tabs": "^7.2.0",
     "@react-navigation/native": "^7.0.14",
     "@shopify/flash-list": "1.7.6",
+    "crypto-js": "^4.2.0",
     "date-fns": "^4.1.0",
     "expo": "^53.0.0",
     "expo-av": "^15.1.7",
     "expo-blur": "~14.1.3",
     "expo-camera": "~16.1.5",
     "expo-constants": "~17.1.3",
+    "expo-crypto": "~14.1.5",
     "expo-font": "~13.3.2",
     "expo-haptics": "~14.1.3",
     "expo-image-picker": "^16.1.4",
@@ -44,6 +46,7 @@
     "react-native": "0.79.5",
     "react-native-calendar-picker": "^8.0.5",
     "react-native-gesture-handler": "~2.24.0",
+    "react-native-get-random-values": "^1.11.0",
     "react-native-linear-gradient": "^2.8.3",
     "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "5.4.0",
@@ -56,8 +59,10 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@types/crypto-js": "^4.2.2",
     "@types/react": "~19.0.10",
-    "@types/react-native-calendar-picker": "^8.0.0",
-    "typescript": "~5.8.3"
+    "typescript": "~5.8.3",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~9.2.0"
   }
 }

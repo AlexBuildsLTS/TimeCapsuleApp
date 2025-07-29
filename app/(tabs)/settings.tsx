@@ -13,7 +13,6 @@ export default function SettingsScreen() {
   const router = useRouter();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [locationEnabled, setLocationEnabled] = useState(true);
-  const { deleteCapsule } = useStore.getState(); // Example of how to get a function
 
   const handleClearData = () => {
     Alert.alert(
@@ -36,7 +35,7 @@ export default function SettingsScreen() {
       await signOut(auth);
       // The onAuthStateChanged listener in profile.tsx will handle the UI update
       router.push('/(tabs)/profile');
-    } catch (error) {
+    } catch {
       Alert.alert("Error", "Could not sign out.");
     }
   };
