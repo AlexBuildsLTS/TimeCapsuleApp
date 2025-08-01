@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AppState, Capsule } from '../types';
+import { AppState, Capsule } from '../types/index';
 import { FirestoreService } from '@/services/firestoreService';
 import { NotificationService } from '@/services/notificationService';
 import { auth } from '@/config/firebaseConfig';

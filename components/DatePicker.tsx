@@ -5,12 +5,12 @@ import {
   StyleSheet,
   Pressable,
   Modal,
-  Dimensions,
+  TextInput,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
 import { Calendar, X } from 'lucide-react-native';
-import CalendarPicker from 'react-native-calendar-picker';
 import { Theme } from '@/constants/Theme';
 
 interface DatePickerProps {
@@ -18,8 +18,6 @@ interface DatePickerProps {
   onDateChange: (date: Date) => void;
   minimumDate?: Date;
 }
-
-const screenWidth = Dimensions.get('window').width;
 
 export function DatePicker({
   selectedDate,
@@ -37,15 +35,28 @@ export function DatePicker({
     });
   };
 
-  const handleDateChange = (date: any) => {
-    if (date && date.toDate) {
-      onDateChange(date.toDate()); // CalendarPicker returns a Moment object, convert to Date
-      setIsModalVisible(false);
+  const formatDateForInput = (date: Date) => {
+    return date.toISOString().split('T')[0]; // YYYY-MM-DD format
+  };
+
+  const getMinDateString = () => {
+    const minDate = minimumDate || new Date();
+    return formatDateForInput(minDate);
+  };
+
+  const handleDateChange = (dateString: string) => {
+    if (dateString) {
+      const newDate = new Date(dateString);
+      if (!isNaN(newDate.getTime())) {
+        onDateChange(newDate);
+        setIsModalVisible(false);
+      }
     }
   };
 
-  return (
-    <>
+  // For web, we can use a native date input
+  if (Platform.OS === 'web') {
+    return (
       <Pressable
         style={styles.dateSelector}
         onPress={() => setIsModalVisible(true)}
@@ -57,7 +68,66 @@ export function DatePicker({
           <Calendar size={20} color={Theme.colors.primary} />
           <Text style={styles.dateText}>{formatDate(selectedDate)}</Text>
         </LinearGradient>
+
+        <Modal
+          visible={isModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setIsModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <MotiView
+              from={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              style={styles.modalContent}
+            >
+              <LinearGradient
+                colors={Theme.colors.cosmicGradient}
+                style={styles.modalGradient}
+              >
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Choose Unlock Date</Text>
+                  <Pressable
+                    onPress={() => setIsModalVisible(false)}
+                    style={styles.closeButton}
+                  >
+                    <X size={24} color={Theme.colors.onSurface} />
+                  </Pressable>
+                </View>
+
+                <View style={styles.dateInputContainer}>
+                  <TextInput
+                    style={styles.dateInput}
+                    value={formatDateForInput(selectedDate)}
+                    onChangeText={handleDateChange}
+                    placeholder="YYYY-MM-DD"
+                    placeholderTextColor={Theme.colors.onSurfaceVariant}
+                    // @ts-ignore - Web-specific props
+                    type="date"
+                    min={getMinDateString()}
+                  />
+                </View>
+              </LinearGradient>
+            </MotiView>
+          </View>
+        </Modal>
       </Pressable>
+    );
+  }
+
+  // For mobile, use a simple date input
+  return (
+    <Pressable
+      style={styles.dateSelector}
+      onPress={() => setIsModalVisible(true)}
+    >
+      <LinearGradient
+        colors={[Theme.colors.surface, Theme.colors.surfaceVariant]}
+        style={styles.dateSelectorGradient}
+      >
+        <Calendar size={20} color={Theme.colors.primary} />
+        <Text style={styles.dateText}>{formatDate(selectedDate)}</Text>
+      </LinearGradient>
 
       <Modal
         visible={isModalVisible}
@@ -72,7 +142,7 @@ export function DatePicker({
             style={styles.modalContent}
           >
             <LinearGradient
-              colors={Theme.colors.cosmicGradient as any}
+              colors={Theme.colors.cosmicGradient}
               style={styles.modalGradient}
             >
               <View style={styles.modalHeader}>
@@ -85,53 +155,24 @@ export function DatePicker({
                 </Pressable>
               </View>
 
-              <CalendarPicker
-                onDateChange={handleDateChange}
-                selectedStartDate={selectedDate}
-                minDate={minimumDate || new Date()}
-                scaleFactor={375}
-                width={screenWidth - Theme.spacing.lg * 4} // Make it responsive
-                height={400}
-                // --- Styling Props for a cohesive look ---
-                selectedDayColor={Theme.colors.primary}
-                selectedDayTextColor={Theme.colors.background}
-                todayBackgroundColor={Theme.colors.primary + '30'}
-                todayTextStyle={{ color: Theme.colors.primary }}
-                textStyle={{
-                  color: Theme.colors.onSurface,
-                  fontFamily: 'Inter-Regular',
-                }}
-                monthTitleStyle={{
-                  color: Theme.colors.onSurface,
-                  fontFamily: 'Inter-Bold',
-                }}
-                yearTitleStyle={{
-                  color: Theme.colors.onSurface,
-                  fontFamily: 'Inter-Bold',
-                }}
-                previousTitle="<"
-                nextTitle=">"
-                previousTitleStyle={{
-                  color: Theme.colors.primary,
-                  fontSize: 20,
-                }}
-                nextTitleStyle={{ color: Theme.colors.primary, fontSize: 20 }}
-                dayLabelsWrapper={{
-                  borderTopColor: Theme.colors.surfaceVariant,
-                  borderBottomColor: Theme.colors.surfaceVariant,
-                }}
-                customDayHeaderStyles={() => ({
-                  textStyle: {
-                    color: Theme.colors.onSurfaceVariant,
-                    fontFamily: 'Inter-SemiBold',
-                  },
-                })}
-              />
+              <View style={styles.dateInputContainer}>
+                <Text style={styles.dateInputLabel}>Select Date:</Text>
+                <TextInput
+                  style={styles.dateInput}
+                  value={formatDateForInput(selectedDate)}
+                  onChangeText={handleDateChange}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor={Theme.colors.onSurfaceVariant}
+                />
+                <Text style={styles.dateInputHint}>
+                  Enter date in YYYY-MM-DD format (e.g., 2024-12-25)
+                </Text>
+              </View>
             </LinearGradient>
           </MotiView>
         </View>
       </Modal>
-    </>
+    </Pressable>
   );
 }
 
@@ -184,5 +225,28 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: Theme.spacing.xs,
+  },
+  dateInputContainer: {
+    gap: Theme.spacing.md,
+  },
+  dateInputLabel: {
+    ...Theme.typography.body,
+    color: Theme.colors.onSurface,
+    fontFamily: 'Inter-SemiBold',
+  },
+  dateInput: {
+    backgroundColor: Theme.colors.surface + '80',
+    borderRadius: Theme.borderRadius.md,
+    padding: Theme.spacing.md,
+    color: Theme.colors.onSurface,
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    borderWidth: 1,
+    borderColor: Theme.colors.primary + '30',
+  },
+  dateInputHint: {
+    ...Theme.typography.caption,
+    color: Theme.colors.onSurfaceVariant,
+    fontFamily: 'Inter-Regular',
   },
 });

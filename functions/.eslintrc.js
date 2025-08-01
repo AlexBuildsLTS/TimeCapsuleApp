@@ -15,7 +15,7 @@ module.exports = {
   parserOptions: {
     project: ["./tsconfig.json", "./tsconfig.dev.json"],
     sourceType: "module",
-    tsconfigRootDir: __dirname,
+    tsconfigRootDir: __dirname, // eslint-disable-line no-undef
   },
   ignorePatterns: [
     "/lib/**/*", // Ignore built files.
