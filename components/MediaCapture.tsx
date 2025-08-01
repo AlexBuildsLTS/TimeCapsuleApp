@@ -7,7 +7,7 @@ import {
   Alert,
   Image,
   Platform,
-} from 'react-native'; // Import Platform
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
 import {
@@ -24,6 +24,7 @@ import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
 import { Theme } from '@/constants/Theme';
 import { MediaItem } from '@/types';
+import { uploadMediaToStorage } from '@/services/storageService'; // New import for upload helper
 
 interface MediaCaptureProps {
   onMediaAdded: (media: MediaItem) => void;
@@ -44,7 +45,6 @@ export function MediaCapture({
   } | null>(null);
 
   const requestPermissions = async () => {
-    // On web, we don't need to ask for camera or audio permissions in the same way.
     if (Platform.OS !== 'web') {
       const { status: cameraStatus } =
         await ImagePicker.requestCameraPermissionsAsync();
@@ -75,7 +75,7 @@ export function MediaCapture({
   };
 
   const getCurrentLocation = async () => {
-    if (Platform.OS === 'web') return undefined; // Location is more complex on web, skip for now
+    if (Platform.OS === 'web') return undefined;
     let { status } = await Location.getForegroundPermissionsAsync();
     if (status !== 'granted') return undefined;
 
@@ -93,33 +93,45 @@ export function MediaCapture({
     }
   };
 
+  const handleMediaUpload = async (
+    uri: string,
+    type: 'photo' | 'video' | 'audio'
+  ) => {
+    try {
+      const location = await getCurrentLocation();
+      const downloadURL = await uploadMediaToStorage(uri, type);
+      const newMedia: MediaItem = {
+        id: Date.now().toString(), // Ensure ID is unique
+        type,
+        content: downloadURL,
+        timestamp: Date.now(),
+        location,
+      };
+      onMediaAdded(newMedia);
+    } catch (error) {
+      console.error('Upload failed:', error);
+      Alert.alert('Upload Error', 'Failed to upload media. Please try again.');
+    }
+  };
+
   const takePhoto = async () => {
     const hasPermission = await requestPermissions();
     if (!hasPermission) return;
 
-    // --- FIX: Use launchImageLibraryAsync as a fallback on web ---
     if (Platform.OS === 'web') {
       pickImage();
       return;
     }
 
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8,
     });
 
     if (!result.canceled && result.assets[0]) {
-      const location = await getCurrentLocation();
-      const newMedia: MediaItem = {
-        id: Date.now().toString(),
-        type: 'photo',
-        content: result.assets[0].uri,
-        timestamp: Date.now(),
-        location,
-      };
-      onMediaAdded(newMedia);
+      await handleMediaUpload(result.assets[0].uri, 'photo');
     }
   };
 
@@ -128,26 +140,19 @@ export function MediaCapture({
     if (!hasPermission) return;
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images', 'videos'],
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
       allowsEditing: true,
       quality: 0.8,
     });
 
     if (!result.canceled && result.assets[0]) {
-      const location = await getCurrentLocation();
-      const newMedia: MediaItem = {
-        id: Date.now().toString(),
-        type: result.assets[0].type === 'video' ? 'video' : 'photo',
-        content: result.assets[0].uri,
-        timestamp: Date.now(),
-        location,
-      };
-      onMediaAdded(newMedia);
+      const type: 'photo' | 'video' =
+        result.assets[0].type === 'video' ? 'video' : 'photo';
+      await handleMediaUpload(result.assets[0].uri, type);
     }
   };
 
   const startRecording = async () => {
-    // Audio recording is not well-supported on web with expo-av
     if (Platform.OS === 'web') {
       Alert.alert(
         'Unsupported',
@@ -183,15 +188,7 @@ export function MediaCapture({
 
     const uri = recording.getURI();
     if (uri) {
-      const location = await getCurrentLocation();
-      const newMedia: MediaItem = {
-        id: Date.now().toString(),
-        type: 'audio',
-        content: uri,
-        timestamp: Date.now(),
-        location,
-      };
-      onMediaAdded(newMedia);
+      await handleMediaUpload(uri, 'audio');
     }
     setRecording(null);
   };
@@ -283,55 +280,51 @@ export function MediaCapture({
           <Text style={styles.recordingText}>Recording...</Text>
         </MotiView>
       )}
-      {media.filter((item) => item.type !== 'text').length > 0 && (
+      {media.length > 0 && (
         <View style={styles.mediaPreview}>
-          <Text style={styles.previewTitle}>
-            Added Media ({media.filter((item) => item.type !== 'text').length})
-          </Text>
+          <Text style={styles.previewTitle}>Added Media ({media.length})</Text>
           <View style={styles.mediaGrid}>
-            {media
-              .filter((item) => item.type !== 'text')
-              .map((item, index) => (
-                <MotiView
-                  key={item.id}
-                  from={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: index * 100 }}
-                  style={styles.mediaItem}
-                >
-                  <View style={styles.mediaContainer}>
-                    {item.type === 'photo' && (
-                      <Image
-                        source={{ uri: item.content }}
-                        style={styles.mediaImage}
-                      />
-                    )}
-                    {item.type === 'video' && (
-                      <View style={styles.videoPlaceholder}>
-                        <Play size={32} color={Theme.colors.primary} />
-                      </View>
-                    )}
-                    {item.type === 'audio' && (
-                      <Pressable
-                        style={styles.audioContainer}
-                        onPress={() => playAudio(item.content, item.id)}
-                      >
-                        {playingAudio?.id === item.id ? (
-                          <Pause size={24} color={Theme.colors.primary} />
-                        ) : (
-                          <Play size={24} color={Theme.colors.primary} />
-                        )}
-                      </Pressable>
-                    )}
+            {media.map((item, index) => (
+              <MotiView
+                key={item.id}
+                from={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: index * 100 }}
+                style={styles.mediaItem}
+              >
+                <View style={styles.mediaContainer}>
+                  {item.type === 'photo' && (
+                    <Image
+                      source={{ uri: item.content }}
+                      style={styles.mediaImage}
+                    />
+                  )}
+                  {item.type === 'video' && (
+                    <View style={styles.videoPlaceholder}>
+                      <Play size={32} color={Theme.colors.primary} />
+                    </View>
+                  )}
+                  {item.type === 'audio' && (
                     <Pressable
-                      style={styles.removeButton}
-                      onPress={() => onMediaRemoved(item.id)}
+                      style={styles.audioContainer}
+                      onPress={() => playAudio(item.content, item.id)}
                     >
-                      <Trash2 size={16} color={Theme.colors.error} />
+                      {playingAudio?.id === item.id ? (
+                        <Pause size={24} color={Theme.colors.primary} />
+                      ) : (
+                        <Play size={24} color={Theme.colors.primary} />
+                      )}
                     </Pressable>
-                  </View>
-                </MotiView>
-              ))}
+                  )}
+                  <Pressable
+                    style={styles.removeButton}
+                    onPress={() => onMediaRemoved(item.id)}
+                  >
+                    <Trash2 size={16} color={Theme.colors.error} />
+                  </Pressable>
+                </View>
+              </MotiView>
+            ))}
           </View>
         </View>
       )}
