@@ -1,0 +1,9 @@
+{
+  "cloudcode.kubeconfigs": [
+    {
+      "name": "/home/ghostos/.continue/config.yaml",
+      "configPath": "/home/ghostos/.continue/config.yaml"
+    }
+  ],
+  "cloudcode.active-kubeconfig": "/home/ghostos/.continue/config.yaml"
+}
