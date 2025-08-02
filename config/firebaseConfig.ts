@@ -1,8 +1,9 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, type Auth } from 'firebase/auth';
+import { initializeAuth, getAuth, type Auth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getFunctions } from 'firebase/functions';
+import persistence from './persistence.native';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -18,7 +19,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 // Initialize Firebase services
-const auth: Auth = getAuth(app);
+const auth: Auth = initializeAuth(app, { persistence });
 
 const db = getFirestore(app);
 const storage = getStorage(app);

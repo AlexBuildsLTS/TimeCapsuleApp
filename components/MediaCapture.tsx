@@ -20,7 +20,7 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { Audio } from 'expo-av';
+import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
 import * as Location from 'expo-location';
 import { Theme } from '@/constants/Theme';
 import { MediaItem } from '@/types';
@@ -119,7 +119,7 @@ export function MediaCapture({
     if (!hasPermission) return;
 
     if (Platform.OS === 'web') {
-      pickImage();
+      await pickImage();
       return;
     }
 
@@ -167,6 +167,11 @@ export function MediaCapture({
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+        interruptionModeIOS: InterruptionModeIOS.DoNotMix,
+        shouldDuckAndroid: true,
+        interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
+        playThroughEarpieceAndroid: false,
       });
       const { recording } = await Audio.Recording.createAsync(
         Audio.RecordingOptionsPresets.HIGH_QUALITY
@@ -183,12 +188,16 @@ export function MediaCapture({
     if (!recording) return;
 
     setIsRecording(false);
-    await recording.stopAndUnloadAsync();
-    await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
-
-    const uri = recording.getURI();
-    if (uri) {
-      await handleMediaUpload(uri, 'audio');
+    try {
+      await recording.stopAndUnloadAsync();
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+      const uri = recording.getURI();
+      if (uri) {
+        await handleMediaUpload(uri, 'audio');
+      }
+    } catch (error) {
+      console.error('Failed to stop recording', error);
+      Alert.alert('Error', 'Failed to stop recording');
     }
     setRecording(null);
   };
