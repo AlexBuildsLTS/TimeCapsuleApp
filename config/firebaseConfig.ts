@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { initializeAuth, getAuth, type Auth } from 'firebase/auth';
+import { initializeAuth, type Auth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getFunctions } from 'firebase/functions';
@@ -19,7 +19,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 // Initialize Firebase services
-const auth: Auth = initializeAuth(app, { persistence });
+const auth: Auth = initializeAuth(app, { persistence: persistence as any });
 
 const db = getFirestore(app);
 const storage = getStorage(app);
