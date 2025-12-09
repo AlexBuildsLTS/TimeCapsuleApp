@@ -1,5 +1,5 @@
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '@/config/firebaseConfig';
+import { storage, auth } from '@/config/firebaseConfig';
 import { EncryptionService } from './encryptionService';
 
 /**
@@ -22,10 +22,16 @@ export async function uploadMediaToStorage(
     // Encrypt the blob
     const encryptedBlob = await EncryptionService.encryptBlob(blob, encryptionKey);
 
-    // Generate a unique filename with timestamp and type
+    // Get current user ID
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error('User must be authenticated to upload files');
+    }
+
+    // Generate a unique filename with user ID, timestamp and type
     const timestamp = Date.now();
     const extension = 'enc'; // Encrypted files get .enc extension
-    const fileName = `${type}s/${timestamp}.${extension}`;
+    const fileName = `${user.uid}/${type}s/${timestamp}.${extension}`;
 
     // Create a storage reference
     const storageRef = ref(storage, fileName);
