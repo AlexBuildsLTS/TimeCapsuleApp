@@ -19,7 +19,7 @@ if [ $? -eq 0 ]; then
     
     # Deploy to Vercel
     echo "🌐 Deploying to Vercel..."
-    vercel --prod
+    vercel --prod --yes
     
     if [ $? -eq 0 ]; then
         echo "🎉 Deployment completed successfully!"

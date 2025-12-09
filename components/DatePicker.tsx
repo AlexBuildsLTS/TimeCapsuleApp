@@ -54,13 +54,10 @@ export function DatePicker({
     }
   };
 
-  // For web, we can use a native date input
+  // For web, use improved native date input
   if (Platform.OS === 'web') {
     return (
-      <Pressable
-        style={styles.dateSelector}
-        onPress={() => setIsModalVisible(true)}
-      >
+      <View style={styles.dateSelector}>
         <LinearGradient
           colors={[Theme.colors.surface, Theme.colors.surfaceVariant]}
           style={styles.dateSelectorGradient}
@@ -96,22 +93,35 @@ export function DatePicker({
                 </View>
 
                 <View style={styles.dateInputContainer}>
-                  <TextInput
-                    style={styles.dateInput}
-                    value={formatDateForInput(selectedDate)}
-                    onChangeText={handleDateChange}
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor={Theme.colors.onSurfaceVariant}
-                    // @ts-ignore - Web-specific props
+                  <Text style={styles.dateInputLabel}>Select Date:</Text>
+                  {/* @ts-ignore - Web-specific HTML input */}
+                  <input
                     type="date"
+                    value={formatDateForInput(selectedDate)}
                     min={getMinDateString()}
+                    onChange={(e) => handleDateChange(e.target.value)}
+                    style={{
+                      ...styles.dateInput,
+                      backgroundColor: Theme.colors.surface + '80',
+                      borderRadius: Theme.borderRadius.md,
+                      padding: Theme.spacing.md,
+                      color: Theme.colors.onSurface,
+                      fontSize: 16,
+                      fontFamily: 'Inter-Regular',
+                      borderWidth: 1,
+                      borderColor: Theme.colors.primary + '30',
+                      border: `1px solid ${Theme.colors.primary}30`,
+                    }}
                   />
+                  <Text style={styles.dateInputHint}>
+                    Choose a future date for your time capsule to unlock
+                  </Text>
                 </View>
               </LinearGradient>
             </MotiView>
           </View>
         </Modal>
-      </Pressable>
+      </View>
     );
   }
 

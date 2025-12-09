@@ -39,6 +39,7 @@ export function MediaCapture({
 }: MediaCaptureProps) {
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [playingAudio, setPlayingAudio] = useState<{
     sound: Audio.Sound;
     id: string;
@@ -97,6 +98,7 @@ export function MediaCapture({
     uri: string,
     type: 'photo' | 'video' | 'audio'
   ) => {
+    setIsUploading(true);
     try {
       const location = await getCurrentLocation();
       const newMedia: MediaItem = {
@@ -110,6 +112,8 @@ export function MediaCapture({
     } catch (error) {
       console.error('Failed to add media:', error);
       Alert.alert('Error', 'Failed to add media. Please try again.');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -288,6 +292,19 @@ export function MediaCapture({
           <Text style={styles.recordingText}>Recording...</Text>
         </MotiView>
       )}
+
+      {isUploading && (
+        <MotiView
+          from={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          style={styles.uploadingIndicator}
+        >
+          <View style={styles.uploadingContent}>
+            <Text style={styles.uploadingText}>Processing media...</Text>
+          </View>
+        </MotiView>
+      )}
+
       {media.length > 0 && (
         <View style={styles.mediaPreview}>
           <Text style={styles.previewTitle}>Added Media ({media.length})</Text>
@@ -420,5 +437,24 @@ const styles = StyleSheet.create({
     backgroundColor: Theme.colors.background + 'A0',
     borderRadius: Theme.borderRadius.full,
     padding: Theme.spacing.xs,
+  },
+  uploadingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Theme.spacing.sm,
+    marginBottom: Theme.spacing.lg,
+    padding: Theme.spacing.md,
+    backgroundColor: Theme.colors.surface + '80',
+    borderRadius: Theme.borderRadius.md,
+  },
+  uploadingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Theme.spacing.sm,
+  },
+  uploadingText: {
+    color: Theme.colors.primary,
+    fontFamily: 'Inter-SemiBold',
   },
 });
