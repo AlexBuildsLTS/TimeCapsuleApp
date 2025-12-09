@@ -24,7 +24,7 @@ import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
 import * as Location from 'expo-location';
 import { Theme } from '@/constants/Theme';
 import { MediaItem } from '../types';
-import { uploadMediaToStorage } from '@/services/storageService'; // New import for upload helper
+import { uploadMediaToStorage } from '@/services/storageService';
 
 interface MediaCaptureProps {
   onMediaAdded: (media: MediaItem) => void;
@@ -101,17 +101,29 @@ export function MediaCapture({
     setIsUploading(true);
     try {
       const location = await getCurrentLocation();
+      
+      // Generate encryption key for this media item
+      const crypto = await import('expo-crypto');
+      const keyBytes = await crypto.getRandomBytesAsync(32);
+      const keyHex = Array.from(keyBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+      
+      // Upload to storage with encryption
+      const downloadURL = await uploadMediaToStorage(uri, type, keyHex);
+      
       const newMedia: MediaItem = {
-        id: Date.now().toString(), // Ensure ID is unique
+        id: Date.now().toString(),
         type,
-        content: uri, // Store local URI
+        content: downloadURL, // Store the download URL
         timestamp: Date.now(),
         location,
+        encrypted: true, // Mark as encrypted
       };
+      
       onMediaAdded(newMedia);
+      Alert.alert('Success', `${type.charAt(0).toUpperCase() + type.slice(1)} uploaded and encrypted successfully!`);
     } catch (error) {
-      console.error('Failed to add media:', error);
-      Alert.alert('Error', 'Failed to add media. Please try again.');
+      console.error('Failed to upload media:', error);
+      Alert.alert('Error', 'Failed to upload media. Please try again.');
     } finally {
       setIsUploading(false);
     }

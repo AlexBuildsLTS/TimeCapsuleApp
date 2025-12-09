@@ -11,20 +11,20 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Theme } from '@/constants/Theme';
-import { auth, storage } from '@/config/firebaseConfig';
+import { auth } from '@/config/firebaseConfig';
 import {
   updateProfile,
   updatePassword,
   reauthenticateWithCredential,
   EmailAuthProvider,
 } from 'firebase/auth';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import * as ImagePicker from 'expo-image-picker';
+import * as Crypto from 'expo-crypto';
+import { uploadMediaToStorage } from '@/services/storageService';
 
 export function Profile() {
   const user = auth.currentUser;
   const [displayName, setDisplayName] = useState(user?.displayName || '');
-  const [email, setEmail] = useState(user?.email || '');
   const [password, setPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -52,17 +52,19 @@ export function Profile() {
     if (!user) return;
     setLoading(true);
     try {
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      const storageRef = ref(storage, `profileImages/${user.uid}`);
-      await uploadBytes(storageRef, blob);
-      const downloadURL = await getDownloadURL(storageRef);
+      // Generate encryption key for profile image
+      const keyBytes = await Crypto.getRandomBytesAsync(32);
+      const keyHex = Array.from(keyBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+      
+      // Upload with encryption
+      const downloadURL = await uploadMediaToStorage(uri, 'photo', keyHex);
+      
       await updateProfile(user, { photoURL: downloadURL });
       setProfileImage(downloadURL);
-      Alert.alert('Success', 'Profile picture updated');
+      Alert.alert('Success', 'Profile picture uploaded and encrypted successfully!');
     } catch (error) {
       console.error('Error uploading profile image:', error);
-      Alert.alert('Error', 'Failed to upload profile picture');
+      Alert.alert('Error', 'Failed to upload profile picture. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -127,7 +129,7 @@ export function Profile() {
       <TextInput
         style={[styles.input, { backgroundColor: '#eee' }]}
         placeholder="Email"
-        value={email}
+        value={user?.email || ''}
         editable={false}
       />
       <TextInput
