@@ -12,7 +12,7 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage, auth } from '@/config/firebaseConfig';
-import { Capsule } from '@/types';
+import { Capsule, MediaItem } from '../types';
 import { EncryptionService } from './encryptionService';
 
 export class FirestoreService {
@@ -43,9 +43,9 @@ export class FirestoreService {
         ? EncryptionService.encryptData(capsuleData.description, encryptionKey)
         : '';
 
-      // 3. (Future Step) Encrypt media files before upload. For now, we upload them directly.
+      // 3. Encrypt and upload media files
       const uploadedMedia = await Promise.all(
-        capsuleData.media.map(async (item) => {
+        capsuleData.media.map(async (item: MediaItem) => {
           if (item.type === 'text') {
             // Encrypt text note content
             return {
@@ -56,14 +56,14 @@ export class FirestoreService {
               ),
             };
           }
-          // Handle file uploads
+          // Encrypt and upload media files
           const response = await fetch(item.content);
           const blob = await response.blob();
-          const fileExtension =
-            item.content.split('.').pop()?.split('?')[0] || 'dat';
+          const encryptedBlob = await EncryptionService.encryptBlob(blob, encryptionKey);
+          const fileExtension = 'enc'; // Encrypted files
           const fileName = `${currentUser.uid}/${Date.now()}.${fileExtension}`;
           const storageRef = ref(storage, fileName);
-          const snapshot = await uploadBytes(storageRef, blob);
+          const snapshot = await uploadBytes(storageRef, encryptedBlob);
           const downloadURL = await getDownloadURL(snapshot.ref);
           return { ...item, content: downloadURL };
         })
@@ -136,7 +136,7 @@ export class FirestoreService {
                 capsule.encryptionKey
               );
             }
-            capsule.media = capsule.media.map((item) => {
+            capsule.media = capsule.media.map((item: MediaItem) => {
               if (item.type === 'text') {
                 return {
                   ...item,
@@ -146,7 +146,7 @@ export class FirestoreService {
                   ),
                 };
               }
-              return item;
+              return item; // Media will be decrypted on demand
             });
           } catch (e) {
             console.error(`Failed to decrypt capsule ${capsule.id}:`, e);
