@@ -23,7 +23,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
 import * as Location from 'expo-location';
 import { Theme } from '@/constants/Theme';
-import { MediaItem } from '@/types';
+import { MediaItem } from '../types';
 import { uploadMediaToStorage } from '@/services/storageService'; // New import for upload helper
 
 interface MediaCaptureProps {
@@ -99,18 +99,17 @@ export function MediaCapture({
   ) => {
     try {
       const location = await getCurrentLocation();
-      const downloadURL = await uploadMediaToStorage(uri, type);
       const newMedia: MediaItem = {
         id: Date.now().toString(), // Ensure ID is unique
         type,
-        content: downloadURL,
+        content: uri, // Store local URI
         timestamp: Date.now(),
         location,
       };
       onMediaAdded(newMedia);
     } catch (error) {
-      console.error('Upload failed:', error);
-      Alert.alert('Upload Error', 'Failed to upload media. Please try again.');
+      console.error('Failed to add media:', error);
+      Alert.alert('Error', 'Failed to add media. Please try again.');
     }
   };
 

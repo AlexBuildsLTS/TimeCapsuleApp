@@ -19,5 +19,4 @@ config.resolver.unstable_conditionNames = [
 config.resolver.assetExts = config.resolver.assetExts.filter(ext => ext !== 'svg');
 config.resolver.sourceExts.push('svg');
 
-
 module.exports = config;

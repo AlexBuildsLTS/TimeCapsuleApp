@@ -3,23 +3,22 @@ import { initializeAuth, type Auth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getFunctions } from 'firebase/functions';
-import persistence from './persistence.native';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+  apiKey: "AIzaSyB2SD_MxUAl1_ndxVTHcIeZHvHMDzM-t4Q",
+  authDomain: "timecapsuleapp-d81e9.firebaseapp.com",
+  projectId: "timecapsuleapp-d81e9",
+  storageBucket: "timecapsuleapp-d81e9.firebasestorage.app",
+  messagingSenderId: "129693062825",
+  appId: "1:129693062825:web:acfa93a79a9dd2dc7efbb8"
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
 // Initialize Firebase services
-const auth: Auth = initializeAuth(app, { persistence: persistence as any });
+const auth: Auth = initializeAuth(app);
 
 const db = getFirestore(app);
 const storage = getStorage(app);

@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Archive, Plus, User, Settings } from 'lucide-react-native'; // <-- Import Settings icon
+import { Archive, Plus, User, Settings } from 'lucide-react-native';
 import { Theme } from '@/constants/Theme';
 
 export default function TabLayout() {
@@ -51,7 +51,6 @@ export default function TabLayout() {
           ),
         }}
       />
-      {/* --- ADD THIS NEW SCREEN TO THE TAB BAR --- */}
       <Tabs.Screen
         name="settings"
         options={{

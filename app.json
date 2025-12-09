@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "north-star-project",
-    "slug": "north-star-project",
+    "name": "northtime-capsule-app",
+    "slug": "timecapsule-app",
     "owner": "alexbuildslts",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true
     },
@@ -23,9 +23,7 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-web-browser",
-      "expo-audio",
-      "expo-video"
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
